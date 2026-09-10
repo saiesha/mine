@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { CalendarDays, Check, ChevronLeft, ChevronRight, Dog, Droplets, Flame, Plus, RotateCcw, Sparkles, Target, Trash2 } from 'lucide-react';
 import './styles.css';
 
@@ -186,7 +187,7 @@ function App() {
       </main>
 
       <div className="buddy" title="Your little buddy is cheering for you" aria-hidden="true">
-        <div className="buddy-dog"><Dog size={42} strokeWidth={1.8} /></div>
+        <div className="buddy-dog">🐶</div>
         <small>{progress >= 80 ? 'good job!' : 'you got this'}</small>
       </div>
 
