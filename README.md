@@ -1,4 +1,4 @@
-# Little by Little — Habit Tracker
+# Little by Little - Habit Tracker
 
 A small, private daily habit tracker built for real life.
 
