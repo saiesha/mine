@@ -1,61 +1,208 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, Droplets, Flame, Plus, RotateCcw, Sparkles, Target, Trash2 } from 'lucide-react';
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Droplets, Flame, Plus, RotateCcw, Sparkles, Target, Trash2 } from 'lucide-react';
 import './styles.css';
 
 const DEFAULT_HABITS = [
-  ['Wake up early','Morning','daily'], ['Breakfast before 9:30','Body','daily'], ['Drink 1L water','Body','daily'], ['Bath in the morning','Morning','daily'], ['Puja in the morning','Mind','daily'],
-  ['Exercise','Body','daily'], ['Go for a walk','Body','daily'], ['Gratitude journal','Mind','daily'], ['Manifestation','Mind','daily'], ['Study','Growth','daily'], ['Coding','Career','daily'], ['System design','Career','daily'],
-  ['Eat healthy / calorie deficit','Body','daily'], ['Cut down processed sugar','Body','daily'], ['Less phone time','Mind','daily'], ['Personal discipline','Mind','daily'], ['Morning skincare','Care','daily'], ['Oil hair','Care','daily'], ['Sleep early','Night','daily'],
-  ['Lunch','Body','daily'], ['Dinner','Body','daily'], ['Breakfast','Body','daily'],
-  ['Cook','Home','weekend'], ['Clean','Home','weekend'], ['Clean dishes','Home','weekend'], ['Wash clothes','Home','weekend'], ['Plan food for the week','Home','weekend'], ['Make grocery list','Home','weekend'],
-  ['Build personal project','Career','weekly'], ['Update website','Career','weekly'], ['GitHub update','Career','weekly'], ['LinkedIn update','Career','weekly'], ['Update resume','Career','weekly']
-].map(([name, category, cadence], i) => ({ id: `h${i+1}`, name, category, cadence }));
+  ['Freshen up', 'Morning', 'daily'],
+  ['Puja', 'Morning', 'daily'],
+  ['Breakfast', 'Body', 'daily'],
+  ['Lunch', 'Body', 'daily'],
+  ['Dinner', 'Body', 'daily'],
+  ['Exercise', 'Body', 'daily'],
+  ['Coding', 'Career', 'daily'],
+  ['System design', 'Career', 'daily'],
+  ['Study / DSA', 'Growth', 'daily'],
+  ['Read / write', 'Growth', 'daily'],
+  ['Morning skincare', 'Care', 'daily'],
+  ['Gratitude', 'Mind', 'daily'],
+  ['Less phone time', 'Mind', 'daily'],
+  ['Sleep on time', 'Night', 'daily'],
+  ['Cook', 'Home', 'weekend'],
+  ['Clean', 'Home', 'weekend'],
+  ['Laundry', 'Home', 'weekend'],
+  ['Plan the week', 'Home', 'weekly'],
+  ['Build personal project', 'Career', 'weekly'],
+].map(([name, category, cadence], i) => ({ id: `h${i + 1}`, name, category, cadence }));
 
-const CATEGORIES = ['All','Morning','Body','Mind','Growth','Career','Care','Home','Night'];
-const keyFor = (date) => date.toISOString().slice(0,10);
-const today = new Date(); today.setHours(0,0,0,0);
-const isWeekend = (d) => [0,6].includes(d.getDay());
-const formatDate = (d) => d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});
+const CATEGORIES = ['All', 'Morning', 'Body', 'Mind', 'Growth', 'Career', 'Care', 'Home', 'Night'];
+const WATER_STEPS = [250, 500, 750, 1000, 1250, 1500, 1750, 2000];
 
-function App(){
-  const [date,setDate] = useState(today);
-  const [habits,setHabits] = useState(()=>JSON.parse(localStorage.getItem('habits')||'null') || DEFAULT_HABITS);
-  const [done,setDone] = useState(()=>JSON.parse(localStorage.getItem('habit-done')||'{}'));
-  const [category,setCategory] = useState('All');
-  const [showAdd,setShowAdd] = useState(false);
-  const [newHabit,setNewHabit] = useState('');
-  const [newCategory,setNewCategory] = useState('Body');
-  const dateKey = keyFor(date);
+const dateKey = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+const isWeekend = (date) => [0, 6].includes(date.getDay());
+const formatDate = (date) => date.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+
+function readStorage(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function App() {
+  const [date, setDate] = useState(today);
+  const [habits, setHabits] = useState(() => readStorage('habits', DEFAULT_HABITS));
+  const [done, setDone] = useState(() => readStorage('habit-done', {}));
+  const [water, setWater] = useState(() => readStorage('habit-water', {}));
+  const [category, setCategory] = useState('All');
+  const [showAdd, setShowAdd] = useState(false);
+  const [newHabit, setNewHabit] = useState('');
+  const [newCategory, setNewCategory] = useState('Body');
+  const [newCadence, setNewCadence] = useState('daily');
+
+  const currentKey = dateKey(date);
   const weekend = isWeekend(date);
 
-  useEffect(()=>localStorage.setItem('habits',JSON.stringify(habits)),[habits]);
-  useEffect(()=>localStorage.setItem('habit-done',JSON.stringify(done)),[done]);
+  useEffect(() => localStorage.setItem('habits', JSON.stringify(habits)), [habits]);
+  useEffect(() => localStorage.setItem('habit-done', JSON.stringify(done)), [done]);
+  useEffect(() => localStorage.setItem('habit-water', JSON.stringify(water)), [water]);
 
-  const visible = useMemo(()=>habits.filter(h=>category==='All'||h.category===category).filter(h=>h.cadence==='daily'||(h.cadence==='weekend'&&weekend)||h.cadence==='weekly'),[habits,category,weekend]);
-  const completed = visible.filter(h=>done[dateKey]?.includes(h.id)).length;
-  const progress = visible.length ? Math.round(completed/visible.length*100) : 0;
-  const toggle = (id) => setDone(x=>({...x,[dateKey]: x[dateKey]?.includes(id) ? x[dateKey].filter(v=>v!==id) : [...(x[dateKey]||[]),id]}));
-  const resetDay = () => setDone(x=>({...x,[dateKey]:[]}));
-  const addHabit = () => { if(!newHabit.trim()) return; setHabits(x=>[...x,{id:`h${Date.now()}`,name:newHabit.trim(),category:newCategory,cadence:'daily'}]); setNewHabit(''); setShowAdd(false); };
-  const removeHabit = (id) => setHabits(x=>x.filter(h=>h.id!==id));
+  const visible = useMemo(() => habits
+    .filter((habit) => category === 'All' || habit.category === category)
+    .filter((habit) => habit.cadence === 'daily' || (habit.cadence === 'weekend' && weekend) || habit.cadence === 'weekly'), [habits, category, weekend]);
 
-  return <div className="app">
-    <header className="topbar"><div className="brand"><span className="brand-dot">✦</span><div><strong>little by little</strong><small>your daily rhythm</small></div></div><button className="icon-btn" onClick={()=>setShowAdd(true)} aria-label="Add habit"><Plus size={19}/></button></header>
-    <main>
-      <section className="hero"><div><p className="eyebrow">{dateKey===keyFor(today)?'TODAY':'LOOKING BACK'}</p><h1>{formatDate(date)}</h1><p className="sub">No pending tasks roll over. Each day starts fresh.</p></div><div className="score"><div className="score-ring" style={{'--p':`${progress*3.6}deg`}}><span>{progress}<small>%</small></span></div><span>{completed} of {visible.length} done</span></div></section>
-      <div className="date-nav"><button onClick={()=>setDate(d=>new Date(d.getTime()-86400000))}><ChevronLeft/></button><div><CalendarDays size={16}/><b>{dateKey===keyFor(today)?'Today':date.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</b></div><button onClick={()=>setDate(d=>new Date(d.getTime()+86400000))}><ChevronRight/></button>{dateKey!==keyFor(today)&&<button className="today-btn" onClick={()=>setDate(today)}>Back to today</button>}</div>
-      <div className="category-row">{CATEGORIES.map(c=><button key={c} className={category===c?'active':''} onClick={()=>setCategory(c)}>{c}</button>)}</div>
-      <section className="list-card">
-        <div className="list-head"><div><h2>{weekend?'Weekend list':'Today’s list'}</h2><p>{weekend?'A little reset, a little progress.':'Tiny actions count. Keep moving.'}</p></div><button className="reset" onClick={resetDay}><RotateCcw size={14}/> Reset day</button></div>
-        <div className="habits">{visible.map(h=>{const checked=done[dateKey]?.includes(h.id); return <div className={`habit ${checked?'checked':''}`} key={h.id}>
-          <button className="check" onClick={()=>toggle(h.id)}>{checked&&<Check size={17}/>}</button><div className="habit-copy"><span>{h.name}</span><small>{h.category}{h.cadence==='weekly'?' · weekly':''}{h.cadence==='weekend'?' · weekend':''}</small></div><button className="delete" onClick={()=>removeHabit(h.id)} aria-label={`Delete ${h.name}`}><Trash2 size={14}/></button>
-        </div>})}</div>
-      </section>
-      <section className="insights"><div className="insight"><Flame size={19}/><div><b>Build the streak</b><span>Consistency beats a perfect day.</span></div></div><div className="insight"><Target size={19}/><div><b>{progress>=80?'Lovely work.':'Aim for 80%+'}</b><span>Do the important things first.</span></div></div><div className="insight"><Droplets size={19}/><div><b>Water check</b><span>1L → 2L, one glass at a time.</span></div></div></section>
-    </main>
-    <footer><Sparkles size={14}/> Built for your real life · stored privately in this browser <span>•</span> <CircleHelp size={14}/></footer>
-    {showAdd&&<div className="modal-backdrop" onClick={()=>setShowAdd(false)}><div className="modal" onClick={e=>e.stopPropagation()}><div className="modal-title"><h2>Add a habit</h2><button onClick={()=>setShowAdd(false)}>×</button></div><input autoFocus value={newHabit} onChange={e=>setNewHabit(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addHabit()} placeholder="e.g. Read 10 pages"/><select value={newCategory} onChange={e=>setNewCategory(e.target.value)}>{CATEGORIES.filter(c=>c!=='All').map(c=><option key={c}>{c}</option>)}</select><button className="add-btn" onClick={addHabit}>Add habit</button></div></div>}
-  </div>
+  const completed = visible.filter((habit) => done[currentKey]?.includes(habit.id)).length;
+  const progress = visible.length ? Math.round((completed / visible.length) * 100) : 0;
+  const waterAmount = water[currentKey] || 0;
+  const waterProgress = Math.min(100, Math.round((waterAmount / 2000) * 100));
+
+  const toggleHabit = (id) => setDone((current) => ({
+    ...current,
+    [currentKey]: current[currentKey]?.includes(id)
+      ? current[currentKey].filter((value) => value !== id)
+      : [...(current[currentKey] || []), id],
+  }));
+
+  const changeWater = (amount) => setWater((current) => ({ ...current, [currentKey]: Math.max(0, Math.min(3000, amount)) }));
+  const resetDay = () => {
+    setDone((current) => ({ ...current, [currentKey]: [] }));
+    setWater((current) => ({ ...current, [currentKey]: 0 }));
+  };
+
+  const addHabit = () => {
+    if (!newHabit.trim()) return;
+    setHabits((current) => [...current, {
+      id: `h${Date.now()}`,
+      name: newHabit.trim(),
+      category: newCategory,
+      cadence: newCadence,
+    }]);
+    setNewHabit('');
+    setShowAdd(false);
+  };
+
+  const removeHabit = (id) => setHabits((current) => current.filter((habit) => habit.id !== id));
+
+  const streak = useMemo(() => {
+    let count = 0;
+    const cursor = new Date(today);
+    while (count < 365) {
+      const key = dateKey(cursor);
+      const dayDone = done[key] || [];
+      const dayHabits = habits.filter((habit) => habit.cadence === 'daily' || (habit.cadence === 'weekend' && isWeekend(cursor)) || habit.cadence === 'weekly');
+      const dayProgress = dayHabits.length ? dayDone.filter((id) => dayHabits.some((habit) => habit.id === id)).length / dayHabits.length : 0;
+      if (dayProgress < 0.8) break;
+      count += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return count;
+  }, [done, habits]);
+
+  const buddy = progress >= 80 ? '🐶' : progress >= 40 ? '🐕' : '🐾';
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-dot">✦</span>
+          <div><strong>little by little</strong><small>your daily rhythm</small></div>
+        </div>
+        <button className="icon-btn" onClick={() => setShowAdd(true)} aria-label="Add habit"><Plus size={19} /></button>
+      </header>
+
+      <main>
+        <section className="hero">
+          <div>
+            <p className="eyebrow">{currentKey === dateKey(today) ? 'TODAY' : 'LOOKING BACK'}</p>
+            <h1>{formatDate(date)}</h1>
+            <p className="sub">Small things, done consistently, become a life.</p>
+          </div>
+          <div className="score">
+            <div className="score-ring" style={{ '--p': `${progress * 3.6}deg` }}><span>{progress}<small>%</small></span></div>
+            <span>{completed} of {visible.length} habits</span>
+          </div>
+        </section>
+
+        <div className="date-nav">
+          <button onClick={() => setDate((d) => new Date(d.getTime() - 86400000))} aria-label="Previous day"><ChevronLeft /></button>
+          <div><CalendarDays size={16} /><b>{currentKey === dateKey(today) ? 'Today' : date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</b></div>
+          <button onClick={() => setDate((d) => new Date(d.getTime() + 86400000))} aria-label="Next day"><ChevronRight /></button>
+          {currentKey !== dateKey(today) && <button className="today-btn" onClick={() => setDate(today)}>Back to today</button>}
+        </div>
+
+        <div className="category-row">
+          {CATEGORIES.map((item) => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}
+        </div>
+
+        <section className="list-card">
+          <div className="list-head">
+            <div><h2>{weekend ? 'Weekend list' : 'Today’s list'}</h2><p>{weekend ? 'Reset a little. Prepare a little. Rest too.' : 'You do not need to do everything. Just keep showing up.'}</p></div>
+            <button className="reset" onClick={resetDay}><RotateCcw size={14} /> Reset</button>
+          </div>
+          <div className="habits">
+            {visible.map((habit) => {
+              const checked = done[currentKey]?.includes(habit.id);
+              return <div className={`habit ${checked ? 'checked' : ''}`} key={habit.id}>
+                <button className="check" onClick={() => toggleHabit(habit.id)} aria-label={`Mark ${habit.name} complete`}>{checked && <Check size={17} />}</button>
+                <div className="habit-copy"><span>{habit.name}</span><small>{habit.category}{habit.cadence !== 'daily' ? ` · ${habit.cadence}` : ''}</small></div>
+                <button className="delete" onClick={() => removeHabit(habit.id)} aria-label={`Delete ${habit.name}`}><Trash2 size={14} /></button>
+              </div>;
+            })}
+            {!visible.length && <div className="empty">Nothing here yet. Add a habit with <b>+</b>.</div>}
+          </div>
+        </section>
+
+        <section className="water-card">
+          <div className="water-top"><div><div className="water-title"><Droplets size={18} /><h2>Water</h2></div><p>Goal: 2L · 250ml at a time is enough.</p></div><strong>{(waterAmount / 1000).toFixed(2)}L</strong></div>
+          <div className="water-track"><span style={{ width: `${waterProgress}%` }} /></div>
+          <div className="water-actions">
+            {WATER_STEPS.map((step) => <button key={step} className={waterAmount >= step ? 'filled' : ''} onClick={() => changeWater(step)}>{step === 1000 ? '1L ✓' : step === 2000 ? '2L ✓' : `${step}ml`}</button>)}
+            <button className="water-reset" onClick={() => changeWater(0)}>Clear</button>
+          </div>
+        </section>
+
+        <section className="insights">
+          <div className="insight"><Flame size={19} /><div><b>{streak ? `${streak} day streak` : 'Start your streak'}</b><span>80%+ counts as a good day.</span></div></div>
+          <div className="insight"><Target size={19} /><div><b>{progress >= 80 ? 'Lovely work.' : 'Aim for 80%+'}</b><span>Important beats perfect.</span></div></div>
+          <div className="insight"><Sparkles size={19} /><div><b>One day at a time</b><span>Tomorrow gets its own fresh start.</span></div></div>
+        </section>
+      </main>
+
+      <div className="buddy" title="Your little buddy is cheering for you"><span>{buddy}</span><small>{progress >= 80 ? 'good job!' : 'you got this'}</small></div>
+
+      <footer>✦ Built for real life · your check-ins stay in this browser</footer>
+
+      {showAdd && <div className="modal-backdrop" onClick={() => setShowAdd(false)}>
+        <div className="modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal-title"><h2>Add a habit</h2><button onClick={() => setShowAdd(false)}>×</button></div>
+          <input autoFocus value={newHabit} onChange={(event) => setNewHabit(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && addHabit()} placeholder="e.g. Read 10 pages" />
+          <select value={newCategory} onChange={(event) => setNewCategory(event.target.value)}>{CATEGORIES.filter((item) => item !== 'All').map((item) => <option key={item}>{item}</option>)}</select>
+          <div className="cadence-row">{[['daily', 'Every day'], ['weekend', 'Weekends'], ['weekly', 'Weekly']].map(([value, label]) => <button key={value} className={newCadence === value ? 'selected' : ''} onClick={() => setNewCadence(value)}>{label}</button>)}</div>
+          <button className="add-btn" onClick={addHabit}>Add habit</button>
+        </div>
+      </div>}
+    </div>
+  );
 }
-createRoot(document.getElementById('root')).render(<App/>);
+
+createRoot(document.getElementById('root')).render(<App />);
