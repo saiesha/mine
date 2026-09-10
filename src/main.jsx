@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Droplets, Flame, Plus, RotateCcw, Sparkles, Target, Trash2 } from 'lucide-react';
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Dog, Droplets, Flame, Plus, RotateCcw, Sparkles, Target, Trash2 } from 'lucide-react';
 import './styles.css';
 
 const DEFAULT_HABITS = [
@@ -118,8 +117,6 @@ function App() {
     return count;
   }, [done, habits]);
 
-  const buddy = progress >= 80 ? '🐶' : progress >= 40 ? '🐕' : '🐾';
-
   return (
     <div className="app">
       <header className="topbar">
@@ -188,7 +185,10 @@ function App() {
         </section>
       </main>
 
-      <div className="buddy" title="Your little buddy is cheering for you"><span>{buddy}</span><small>{progress >= 80 ? 'good job!' : 'you got this'}</small></div>
+      <div className="buddy" title="Your little buddy is cheering for you" aria-hidden="true">
+        <div className="buddy-dog"><Dog size={42} strokeWidth={1.8} /></div>
+        <small>{progress >= 80 ? 'good job!' : 'you got this'}</small>
+      </div>
 
       <footer>✦ Built for real life · your check-ins stay in this browser</footer>
 
