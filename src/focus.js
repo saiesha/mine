@@ -20,7 +20,8 @@ let task = '';
 
 const formatTime = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 const totalMinutes = () => sessions.reduce((sum, item) => sum + item.minutes, 0);
-const todayKey = () => new Date().toISOString().slice(0, 10);
+const todayKey = () => new Date().toLocaleDateString('en-CA');
+const persistSettings = () => localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 
 function render() {
   const total = sessions.length;
@@ -37,12 +38,16 @@ function render() {
       <div><p class="focus-eyebrow">FOCUS</p><h2>Pomodoro</h2><p>Give one thing your full attention.</p></div>
       <div class="focus-stats"><b>${total}</b><span>sessions</span></div>
     </div>
+    <div class="focus-settings-row">
+      <label>Focus <select class="focus-duration" ${running ? 'disabled' : ''}>${[5,10,15,20,25,30,45,50,60].map((m) => `<option value="${m}" ${settings.focus === m ? 'selected' : ''}>${m} min</option>`).join('')}</select></label>
+      <label>Break <select class="break-duration" ${running ? 'disabled' : ''}>${[1,5,10,15,20,30].map((m) => `<option value="${m}" ${settings.break === m ? 'selected' : ''}>${m} min</option>`).join('')}</select></label>
+    </div>
     <div class="focus-timer ${mode === 'break' ? 'is-break' : ''}">
       <span>${mode === 'break' ? 'BREAK' : 'FOCUS'}</span>
       <strong>${formatTime(remaining)}</strong>
       <small>${running ? 'in progress' : mode === 'break' ? 'rest a little' : 'ready when you are'}</small>
     </div>
-    <input class="focus-task" value="${task.replace(/"/g, '&quot;')}" placeholder="What are you working on? e.g. C++ DSA" ${running ? 'disabled' : ''} />
+    ${mode === 'focus' ? `<input class="focus-task" value="${task.replace(/"/g, '&quot;')}" placeholder="What are you working on? e.g. C++ DSA" ${running ? 'disabled' : ''} />` : ''}
     <div class="focus-actions">
       <button class="focus-start">${running ? 'Pause' : mode === 'break' ? 'Start break' : 'Start focus'}</button>
       <button class="focus-reset">Reset</button>
@@ -59,6 +64,18 @@ function render() {
   if (input) input.addEventListener('input', (e) => { task = e.target.value; });
   document.querySelector('.focus-start').addEventListener('click', toggleTimer);
   document.querySelector('.focus-reset').addEventListener('click', resetTimer);
+  document.querySelector('.focus-duration').addEventListener('change', (e) => {
+    settings.focus = Number(e.target.value);
+    persistSettings();
+    if (!running && mode === 'focus') remaining = settings.focus * 60;
+    render();
+  });
+  document.querySelector('.break-duration').addEventListener('change', (e) => {
+    settings.break = Number(e.target.value);
+    persistSettings();
+    if (!running && mode === 'break') remaining = settings.break * 60;
+    render();
+  });
 }
 
 function saveSession() {
@@ -123,7 +140,6 @@ function mount() {
     requestAnimationFrame(mount);
     return;
   }
-
   const card = document.createElement('section');
   card.className = 'focus-card';
   main.appendChild(card);
