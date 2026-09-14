@@ -118,9 +118,15 @@ function resetTimer() {
 }
 
 function mount() {
+  const main = document.querySelector('main');
+  if (!main) {
+    requestAnimationFrame(mount);
+    return;
+  }
+
   const card = document.createElement('section');
   card.className = 'focus-card';
-  document.querySelector('main')?.appendChild(card);
+  main.appendChild(card);
   render();
 }
 
